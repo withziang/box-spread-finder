@@ -27,26 +27,22 @@
 */
 
 #include <map>
-#include <queue>
 #include <iostream>
-#include <vector>
-#include <algorithm>
-#include <string>
-#include <unordered_map>
-#include <memory>    
+#include <vector>  
 #include <cstdio>
 
 struct OptionContract{
 	int id;
+	double bid;
+	double ask;
 	OptionContract() = default;
-    OptionContract(int _id) : id(_id) {}
+    OptionContract(int _id, double _bid, double _ask) : id(_id), ask(_bid), bid(_ask) {}
 };
 
 class OptionChain{
 private:
 	std::map<std::string, std::map<double, OptionContract>> calls;
 	std::map<std::string, std::map<double, OptionContract>> puts;
-
 public:
 	OptionChain() = default;
 	~OptionChain() = default;
@@ -61,6 +57,7 @@ public:
         return *this;
     }
 
+    friend class BoxSpreadFinder; // friend s.t BoxSpreadFinder can access it
 };
 
 struct Arbitrage{
@@ -73,7 +70,7 @@ struct Arbitrage{
 	Arbitrage(int cssi, int csbi, int psbi, int pssi) : call_spread_sell_id(cssi), call_spread_buy_id(csbi),
 	put_spread_buy_id(psbi), put_spread_sell_id(pssi) {}
 
-	std::string print() const {
+	void print() const {
 		// need improvement
 		std::cout << 
 		"call_spread_sell_id: " << call_spread_sell_id << "\n" <<
@@ -88,13 +85,40 @@ struct Arbitrage{
 class BoxSpreadFinder{
 private:
 	OptionChain& optionChain;
-
 public:
 	BoxSpreadFinder(OptionChain& _optionChain) : optionChain(_optionChain) {}
 	~BoxSpreadFinder() = default;
 
 	std::vector<Arbitrage> findEveryBoxSpreadArbitrage(){
 		// main process, return a list of Arbitrage struct
+
+		std::vector<Arbitrage> arbitrages;
+
+		auto it_calls = calls.begin(), it_puts = puts.begin();
+		while (it_calls != puts.end() && it_puts != puts.end()){
+			auto [_, timeVerticals_call] = *it_calls;
+			auto [_, timeVerticals_put] = *it_puts;
+
+			/*
+				Algo Explanation:
+					Go From lower strike price to higher strike price,
+					record (buy call - sell put) in a sorted list.
+					
+					Do binary search on this list s.t
+						(buy call@B - sell put@B) + B < A - (buy put@A - sell call@A)
+			*/
+
+
+
+
+
+
+
+			it_calls++;
+			it_puts++;
+		}
+
+
 
 		return {};
 	}
@@ -111,27 +135,51 @@ int main(){
 	   	|| Strike Price |---------------------------------------------------------------------------------------------------||
 		||              |          Bid           |          Ask          |          Bid           |          Ask            ||
 		||              |---------------------------------------------------------------------------------------------------||
-		||     150      |          30.30   (1)   |          30.50   (2)  |          0.37     (3)  |          0.38      (4)  ||
+		||     150      |          30.30   (1)   |          30.50        |          0.37     (2)  |          0.38           ||
 		||              |---------------------------------------------------------------------------------------------------||
-		||     155      |          25.45   (5)   |          25.70   (6)  |          0.50     (7)  |          0.51      (8)  ||
+		||     155      |          25.45   (3)   |          25.70        |          0.50     (4)  |          0.51           ||
 		||              |---------------------------------------------------------------------------------------------------||
-		||     160      |          20.75   (9)   |          21.00   (10) |          0.72     (11) |          0.73      (12) ||
+		||     160      |          20.75   (5)   |          21.00        |          0.72     (6)  |          0.73           ||
 		||              |---------------------------------------------------------------------------------------------------||
-		||     165      |          16.20    (13) |          16.35   (14) |          1.13     (15) |          1.14      (16) ||
+		||     165      |          16.20   (7)   |          16.35        |          1.13     (8)  |          1.14           ||
 		======================================================================================================================
 
 		Expected Output: 
 		(1):
-			call_spread_sell_id: 13
-			call_spread_buy_id: 6
-			put_spread_buy_id: 16
-			put_spread_sell_id: 7
+			call_spread_sell_id: 7
+			call_spread_buy_id: 3
+			put_spread_buy_id: 8
+			put_spread_sell_id: 4
 
 		profit: 10
-		Calculation: (6) - (13) + (7) - (16) = 25.70 - 16.20 + 0.50 - 1.14 = 8.86 < 10
+		Calculation: (3) - (7) + (4) - (8) = 25.70 - 16.20 + 0.50 - 1.14 = 8.86 < 10
 	*/	
 
+	// adding the above data
+	OptionChain optionChain;
+	optionChain.addCall("20260202", 150.0, OptionContract(1, 30.3, 30.5))
+				.addPut("20260202", 150.0, OptionContract(2, 0.37, 0.38)) // first line
+
+				.addCall("20260202", 155.0, OptionContract(3, 25.45, 25.70))
+				.addPut("20260202", 155.0, OptionContract(4, 0.50, 0.51)) // second line
+
+				.addCall("20260202", 160.0, OptionContract(5, 20.75, 21.00))
+				.addPut("20260202", 160.0, OptionContract(6, 0.72, 0.73)) // third line
+
+				.addCall("20260202", 165.0, OptionContract(7, 16.20, 16.35))
+				.addPut("20260202", 165.0, OptionContract(8, 1.13, 1.14)); // fourth line
 
 
 
+	BoxSpreadFinder engine(optionChain);
+
+	auto result = engine.findEveryBoxSpreadArbitrage();
+
+	for (auto arb: result){
+		std::cout << "(): \n";
+		arb.print();
+		std::cout << std::endl;
+	}
+
+	return 0;
 }
