@@ -94,10 +94,10 @@ public:
 
 		std::vector<Arbitrage> arbitrages;
 
-		auto it_calls = calls.begin(), it_puts = puts.begin();
-		while (it_calls != puts.end() && it_puts != puts.end()){
+		auto it_calls = optionChain.calls.begin(), it_puts = optionChain.puts.begin();
+		while (it_calls != optionChain.puts.end() && it_puts != optionChain.puts.end()){
 			auto [_, timeVerticals_call] = *it_calls;
-			auto [_, timeVerticals_put] = *it_puts;
+			auto [__, timeVerticals_put] = *it_puts;
 
 			/*
 				Algo Explanation:
@@ -109,6 +109,10 @@ public:
 			*/
 
 
+			// now it is -- std::map<double, OptionContract>
+
+			// sorted list
+			std::map<double, std::vector<std::pair<int,int>>> _records;
 
 
 
