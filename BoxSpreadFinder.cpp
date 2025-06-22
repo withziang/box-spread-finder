@@ -96,27 +96,55 @@ public:
 
 		auto it_calls = optionChain.calls.begin(), it_puts = optionChain.puts.begin();
 		while (it_calls != optionChain.puts.end() && it_puts != optionChain.puts.end()){
-			auto [_, timeVerticals_call] = *it_calls;
-			auto [__, timeVerticals_put] = *it_puts;
+			auto [date_call, timeVerticals_call] = *it_calls;
+			auto [date_put, timeVerticals_put] = *it_puts;
+
+			if (date_call != date_put){
+					std::cerr << "\033[1;31mError: maps have different keys -- call and put time mismatch\n\033[0m";
+					break;
+				}
 
 			/*
 				Algo Explanation:
 					Go From lower strike price to higher strike price,
-					record (buy call - sell put) in a sorted list.
+					record (buy call - sell put) + B in a sorted list.
 					
 					Do binary search on this list s.t
 						(buy call@B - sell put@B) + B < A - (buy put@A - sell call@A)
+					Anything that satisfies goes into the return list
 			*/
 
 
 			// now it is -- std::map<double, OptionContract>
 
 			// sorted list
-			std::map<double, std::vector<std::pair<int,int>>> _records;
+			std::map<double, std::vector<std::pair<int,int>>> _records; // pair: {id of call, id of put}
+
+			// go from lower strike price to higher
+			auto it_call_chain = timeVerticals_call.begin();
+			auto it_put_chain = timeVerticals_put.begin();
+			for (;it_call_chain != timeVerticals_call.end() && it_put_chain != timeVerticals_put.end();
+				++it_call_chain, ++it_put_chain
+			){
+				auto [call_strike_price, call_contract] = *it_call_chain;
+				auto [put_strike_price, put_contract] = *it_put_chain;
+
+				if (call_strike_price != put_strike_price){
+					std::cerr << "Error: maps have different keys -- call and put strike price mismatch\n";
+					break;
+				}
+
+				// A - (buy put@A - sell call@A)
+				double upperbound = call_strike_price - (put_contract.ask - call_contract.bid);
+				std::cout << upperbound << " ";
+
+				// binary search
+
+				// update the sorted list 
 
 
 
-
+			}
 
 			it_calls++;
 			it_puts++;
@@ -124,7 +152,7 @@ public:
 
 
 
-		return {};
+		return arbitrages;
 	}
 
 
