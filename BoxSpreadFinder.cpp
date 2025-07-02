@@ -36,7 +36,7 @@ struct OptionContract{
 	double bid;
 	double ask;
 	OptionContract() = default;
-    OptionContract(int _id, double _bid, double _ask) : id(_id), ask(_bid), bid(_ask) {}
+    OptionContract(int _id, double _bid, double _ask) : id(_id), bid(_bid), ask(_ask) {}
 };
 
 class OptionChain{
@@ -100,9 +100,9 @@ public:
 			auto [date_put, timeVerticals_put] = *it_puts;
 
 			if (date_call != date_put){
-					std::cerr << "\033[1;31mError: maps have different keys -- call and put time mismatch\n\033[0m";
-					break;
-				}
+				std::cerr << "\033[1;31mError: maps have different keys -- call and put time mismatch\n\033[0m";
+				return {};
+			}
 
 			/*
 				Algo Explanation:
@@ -136,14 +136,30 @@ public:
 
 				// A - (buy put@A - sell call@A)
 				double upperbound = call_strike_price - (put_contract.ask - call_contract.bid);
-				std::cout << upperbound << " ";
+				//std::cout << upperbound << " ";
 
 				// binary search
+				auto pt_upperbound = _records.lower_bound(upperbound);  // First key >= upperbound
+				if (pt_upperbound == _records.begin())
+					continue;
+				pt_upperbound--;  // key < upperbound
+
+				// every pt_upperbound is valid now
+				while (pt_upperbound != _records.begin()){
+					// call_spread_sell_id, call_spread_buy_id, put_spread_buy_id, put_spread_sell_id
+					for (auto _a : pt_upperbound->second){
+						arbitrages.push_back(Arbitrage(call_contract.id,_a.first,put_contract.id,_a.second));
+					}
+					pt_upperbound--;
+				}
+				for (auto _a : pt_upperbound->second){
+					arbitrages.push_back(Arbitrage(call_contract.id,_a.first,put_contract.id,_a.second));
+				}
 
 				// update the sorted list 
-
-
-
+				//(buy call@B - sell put@B) + B
+				auto lowerbound = call_strike_price + (call_contract.ask - put_contract.bid);
+				_records[lowerbound].push_back(std::make_pair(call_contract.id, put_contract.id));
 			}
 
 			it_calls++;
